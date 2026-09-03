@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/therealm-tech/skillmgr/main/schema/skillmgr.schema.json
+#
+# Every key skillmgr understands, with its default in a comment.
+
+# Where the skills are deployed; each directory gets a full copy. A relative
+# path resolves against the working directory, and `~` is expanded.
+# Default: .claude/skills (what Claude Code reads) and .agents/skills (the
+# cross-client convention every other Agent Skills client scans).
+targets:
+  - .claude/skills
+  - .agents/skills
+
+repos:
+  # A git repository, pinned to a tag, a branch or a commit.
+  - repo: https://github.com/toto/tata
+    revision: 1.2.3
+    paths:
+      # Every directory under `mydir/` that holds a SKILL.md, at any depth,
+      # except the ones whose path under `mydir/` starts with `toto`.
+      - path: mydir/
+        recurse: true  # default: false, i.e. immediate children only
+        exclude: ^toto  # default: none
+
+  # A plugin repository: its skills sit under `<plugin>/skills/`, which
+  # `recurse: true` finds without naming each plugin.
+  - repo: git@github.com:acme/agent-plugins.git
+    revision: main
+    paths:
+      - path: plugins
+        recurse: true
+
+  # `local` reads the directory holding this file, and takes no revision.
+  - repo: local
+    paths:
+      - path: skills

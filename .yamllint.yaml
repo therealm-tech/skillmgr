@@ -1,0 +1,17 @@
+extends: default
+
+rules:
+  # yaml-conventions: no `---` opening a file.
+  document-start:
+    present: false
+  # yaml-conventions: block style only. `non-empty` still allows `{}` / `[]`.
+  braces:
+    forbid: non-empty
+  brackets:
+    forbid: non-empty
+  # A pinned action SHA plus its tag comment does not fit in 80 columns.
+  line-length: disable
+  # `on:` is the GitHub Actions trigger key and must stay unquoted, so key
+  # truthiness cannot be checked here. Values are still checked.
+  truthy:
+    check-keys: false

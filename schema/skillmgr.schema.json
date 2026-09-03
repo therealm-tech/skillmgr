@@ -1,0 +1,118 @@
+{
+  "$defs": {
+    "PathSpec": {
+      "additionalProperties": false,
+      "description": "One place to look for skills inside a source.",
+      "properties": {
+        "exclude": {
+          "description": "Regular expression rejecting skills whose path under `path` matches.",
+          "format": "regex",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "Directory to search, relative to the source root.\n\nA directory holding a `SKILL.md` is itself the skill; otherwise its\nsubdirectories are searched.",
+          "type": "string"
+        },
+        "recurse": {
+          "default": false,
+          "description": "Search the whole subtree rather than only the immediate children.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "RepoSpec": {
+      "additionalProperties": false,
+      "description": "One source of skills: a git repository, or the config file's own directory.",
+      "else": {
+        "properties": {
+          "revision": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision"
+        ]
+      },
+      "if": {
+        "properties": {
+          "repo": {
+            "const": "local"
+          }
+        },
+        "required": [
+          "repo"
+        ]
+      },
+      "properties": {
+        "paths": {
+          "description": "Where to look for skills inside the source.",
+          "items": {
+            "$ref": "#/$defs/PathSpec"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "repo": {
+          "description": "A git URL, a path to a git repository, or `local` for the directory\nholding this config file.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "revision": {
+          "description": "The git revision to check out: a tag, a branch or a commit.\n\nRequired for a git source, and forbidden on `local`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "repo",
+        "paths"
+      ],
+      "then": {
+        "properties": {
+          "revision": false
+        }
+      },
+      "type": "object"
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/therealm-tech/skillmgr/main/schema/skillmgr.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Declares where Agent Skills come from and which directories they are deployed into.",
+  "properties": {
+    "repos": {
+      "description": "The sources to pull skills from.",
+      "items": {
+        "$ref": "#/$defs/RepoSpec"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "targets": {
+      "description": "Directories the skills are deployed into, each getting a full copy.\n\nA relative path resolves against the working directory, and a leading\n`~` is expanded. Defaults to `.claude/skills` and `.agents/skills`.",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": [
+        "array",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "repos"
+  ],
+  "title": "skillmgr configuration",
+  "type": "object"
+}

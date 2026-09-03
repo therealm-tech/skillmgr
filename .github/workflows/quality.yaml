@@ -1,0 +1,53 @@
+name: quality
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    name: pre-commit
+    runs-on: ubuntu-24.04
+    steps:
+      - name: check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: cache the cargo build
+        uses: Swatinem/rust-cache@63fed3e2fecf6f7b51dc6f043341b79ef82a9ae7  # v2.9.2
+
+      - name: install the pinned toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: install shellcheck
+        run: sudo apt-get update && sudo apt-get install --yes shellcheck
+
+      - name: install pre-commit
+        run: pipx install pre-commit
+
+      - name: run every hook
+        run: pre-commit run --all-files --show-diff-on-failure
+
+  test:
+    name: test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: cache the cargo build
+        uses: Swatinem/rust-cache@63fed3e2fecf6f7b51dc6f043341b79ef82a9ae7  # v2.9.2
+
+      - name: install the pinned toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: run the test suite
+        run: cargo test --all-targets --locked

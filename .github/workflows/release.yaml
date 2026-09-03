@@ -1,0 +1,89 @@
+name: release
+
+on:
+  push:
+    tags:
+      - v*
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  version:
+    name: version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: derive the version from the tag
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          committed="$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["version"])')"
+          if [ "$committed" != "$version" ]; then
+            echo "Cargo.toml says ${committed} but the tag says ${version}." >&2
+            echo "Cut releases with scripts/release.sh so the two stay in step." >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+  binaries:
+    name: binaries
+    needs:
+      - version
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            asset: skillmgr-linux-amd64
+          - runner: ubuntu-24.04-arm
+            asset: skillmgr-linux-arm64
+          - runner: macos-15
+            asset: skillmgr-macos-arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: install the pinned toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+
+      - name: build the release binary
+        run: cargo build --release --locked
+
+      - name: name the artefact
+        run: mv target/release/skillmgr "${{ matrix.asset }}"
+
+      - name: keep the binary for the release job
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
+          if-no-files-found: error
+
+  publish:
+    name: publish
+    needs:
+      - version
+      - binaries
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: collect the binaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes artifacts/*
