@@ -22,6 +22,9 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+      # upload-sarif reads the workflow run it belongs to; without this the
+      # upload fails with "Resource not accessible by integration".
+      actions: read
       security-events: write
     steps:
       - name: check out the repository
